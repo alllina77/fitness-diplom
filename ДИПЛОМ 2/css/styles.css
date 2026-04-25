@@ -1875,3 +1875,243 @@ body.light-theme .mental-sub {
         border: 1px solid rgba(63, 224, 197, 0.2);
       }
 
+      /* Mobile-first hardening for comfortable phone usage */
+      @media (max-width: 1024px) {
+        .app-content {
+          padding: 14px;
+        }
+
+        .left,
+        .center,
+        .right {
+          height: auto;
+          max-height: none;
+          overflow: visible;
+        }
+
+        .panel {
+          padding: 14px;
+        }
+
+        .topbar {
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .row {
+          flex-wrap: wrap;
+        }
+      }
+
+      @media (max-width: 768px) {
+        :root {
+          --toolbar-height: 112px;
+        }
+
+        .top-toolbar {
+          padding: 8px 10px;
+          align-items: stretch;
+        }
+
+        .toolbar-left {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+
+        .toolbar-profile-btn {
+          width: 100%;
+          max-width: 100%;
+          justify-content: flex-start;
+        }
+
+        /* Override previous hide rule: keep tabs visible on phone */
+        .toolbar-tabs {
+          display: flex;
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scroll-snap-type: x mandatory;
+          padding: 4px;
+          gap: 6px;
+        }
+
+        .toolbar-tab {
+          flex: 0 0 auto;
+          min-width: 132px;
+          padding: 10px 12px;
+          font-size: 13px;
+          scroll-snap-align: start;
+        }
+
+        .app-content {
+          margin-top: var(--toolbar-height);
+          min-height: calc(100vh - var(--toolbar-height));
+          padding: 10px;
+        }
+
+        .app {
+          gap: 10px;
+        }
+
+        .panel {
+          border-radius: 12px;
+          padding: 12px;
+        }
+
+        h1 {
+          font-size: 20px;
+          margin-bottom: 10px;
+        }
+
+        h2 {
+          font-size: 19px;
+          margin: 0;
+        }
+
+        h3 {
+          font-size: 17px;
+          margin: 10px 0;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+          font-size: 16px;
+        }
+
+        button {
+          min-height: 42px;
+          padding: 10px 12px;
+        }
+
+        input,
+        select,
+        textarea {
+          min-height: 42px;
+          padding: 10px 12px;
+        }
+
+        .form-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+
+        #training-tab .left .form-row,
+        #training-tab .left .form-row:has(#planName),
+        #training-tab .left .form-row:has(#daysCount) {
+          display: flex;
+          grid-template-columns: none;
+        }
+
+        .exercise {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .exercise-actions {
+          width: 100%;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+
+        .tabs {
+          overflow-x: auto;
+          white-space: nowrap;
+          padding-bottom: 6px;
+        }
+
+        .tab {
+          flex: 0 0 auto;
+        }
+
+        .calendar {
+          padding: 10px;
+        }
+
+        .calendar-day {
+          min-height: 34px;
+          font-size: 12px;
+        }
+
+        #modal .window,
+        #confirmModal .confirm-window,
+        #alertModal .alert-window {
+          width: calc(100% - 20px);
+          max-width: none;
+          max-height: 86vh;
+          padding: 14px;
+          border-radius: 12px;
+        }
+
+        #confirmModal .confirm-actions {
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        #confirmModal .btn {
+          margin: 0;
+        }
+      }
+
+      @media (max-width: 520px) {
+        :root {
+          --toolbar-height: 124px;
+        }
+
+        .auth-root {
+          padding: 12px;
+        }
+
+        .auth-card {
+          padding: 12px;
+          gap: 10px;
+        }
+
+        .auth-grid,
+        .auth-gender-row,
+        .auth-mode {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar-tab {
+          min-width: 120px;
+          font-size: 12px;
+          padding: 9px 10px;
+        }
+
+        .toolbar-username {
+          max-width: 180px;
+        }
+
+        .panel {
+          padding: 10px;
+        }
+
+        .social-toolbar,
+        .social-row,
+        .social-comment-form {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .social-like-btn {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .workout-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+        }
+
+        .workout-actions {
+          width: 100%;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+      }
+
