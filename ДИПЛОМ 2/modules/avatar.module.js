@@ -2,6 +2,7 @@ window.AppModules = window.AppModules || {};
 
 window.AppModules.avatar = {
   storageKey: "digitalAvatar_v1",
+  progressStorageKey: "avatarProgress_v1",
   styleId: "digital-avatar-styles-v1",
 
   stages: [
@@ -143,6 +144,25 @@ window.AppModules.avatar = {
     const perLevel = this.xpPerLevel;
     const level = Math.max(1, Math.min(99, 1 + Math.floor(xp / perLevel)));
     const levelProgress = (xp % perLevel) / perLevel;
+
+    try {
+      const username = String(window.AppAuth?.user?.username || "").trim();
+      localStorage.setItem(
+        this.progressStorageKey,
+        JSON.stringify({
+          username,
+          xp,
+          level,
+          levelProgress,
+          entriesTotal: entries.length,
+          workoutsTotal: workouts.length,
+          checkinsTotal: mental.length,
+          updatedAt: Date.now(),
+        }),
+      );
+    } catch (_e) {
+      // no-op
+    }
 
     return {
       xp,

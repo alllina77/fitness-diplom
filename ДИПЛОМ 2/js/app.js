@@ -666,13 +666,42 @@
           modal.classList.remove("active");
         }
 
-        function showAlert(message) {
-          alertMessage.textContent = message;
-          alertModal.classList.add("active");
+        // Нужен для inline-обработчика backdrop в HTML.
+        window.closeModal = closeModal;
+
+        function ensureToastHost() {
+          let host = document.getElementById("appToastHost");
+          if (host) return host;
+          host = document.createElement("div");
+          host.id = "appToastHost";
+          document.body.appendChild(host);
+          return host;
         }
 
         function closeAlert() {
-          alertModal.classList.remove("active");
+          if (alertModal) alertModal.classList.remove("active");
+        }
+
+        function showAlert(message) {
+          closeModal();
+          closeAlert();
+          if (alertMessage) alertMessage.textContent = "";
+          const text = String(message || "").trim();
+          if (!text) return;
+          const host = ensureToastHost();
+          const toast = document.createElement("div");
+          toast.className = "app-toast";
+          toast.innerHTML = `
+            <span class="app-toast-icon" aria-hidden="true">✓</span>
+            <span class="app-toast-text">${escapeHtml(text)}</span>
+          `;
+          host.appendChild(toast);
+          requestAnimationFrame(() => toast.classList.add("visible"));
+          setTimeout(() => {
+            toast.classList.remove("visible");
+            toast.classList.add("leaving");
+            setTimeout(() => toast.remove(), 260);
+          }, 2200);
         }
 
         function showConfirm(message, onYes) {
@@ -1434,13 +1463,14 @@
                 saveWorkoutsForCurrentPlan(currentWorkouts);
                 rememberLastSetForExercise(ex.name, sets[sets.length - 1]);
 
+                let gained = 0;
                 try {
-                  const gained = sets.length * 5;
+                  gained = sets.length * 5;
                   if (gained > 0) window.AppModules?.avatar?.grantXp?.("workout", gained);
                 } catch (_e) { /* no-op */ }
 
                 closeModal();
-                showAlert("Запись сохранена");
+                if (gained <= 0) showAlert("Запись сохранена");
                 updateMuscleStats();
                 if (selectedExerciseRef && selectedExerciseRef.exId === ex.id)
                   showChartsForExercise(ex);
@@ -1744,8 +1774,9 @@
 
                 saveWorkoutsForCurrentPlan(currentWorkouts);
 
+                let gained = 0;
                 try {
-                  const gained = exercisesWithSets.reduce((sum, ex) => {
+                  gained = exercisesWithSets.reduce((sum, ex) => {
                     const valid = (ex.sets || [])
                       .map((set) => sanitizeSet(set))
                       .filter((set) => set.r > 0 || set.w > 0);
@@ -1755,7 +1786,7 @@
                 } catch (_e) { /* no-op */ }
 
                 closeModal();
-                showAlert("Тренировка сохранена");
+                if (gained <= 0) showAlert("Тренировка сохранена");
                 updateMuscleStats();
 
                 if (selectedExerciseRef) {
@@ -2710,6 +2741,32 @@
               setTimeout(() => {
                 restoreRightPanel();
               }, 100);
+              return;
+            }
+            if (targetTab === "nutrition") {
+              // Вкладка питания изначально скрыта; при первом рендере Chart
+              // может получить нулевые размеры.
+              const rerenderNutrition = () => {
+                window.AppModules?.nutrition?.render?.("nutritionModuleMount");
+                window.dispatchEvent(new Event("resize"));
+              };
+              requestAnimationFrame(() => {
+                requestAnimationFrame(rerenderNutrition);
+              });
+              setTimeout(rerenderNutrition, 180);
+              if (!window.Chart) {
+                const existing = document.getElementById("chartjs-fallback-loader");
+                if (!existing) {
+                  const script = document.createElement("script");
+                  script.id = "chartjs-fallback-loader";
+                  script.src =
+                    "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+                  script.onload = () => {
+                    rerenderNutrition();
+                  };
+                  document.head.appendChild(script);
+                }
+              }
             }
           };
 
@@ -2938,7 +2995,9 @@
 
         if (alertOk) {
           alertOk.addEventListener("click", closeAlert);
+          alertOk.onclick = closeAlert;
         }
+        window.closeAlert = closeAlert;
 
         // Обработчик для свертывания/развертывания блока "Мои планы"
         if (plansToggle) {

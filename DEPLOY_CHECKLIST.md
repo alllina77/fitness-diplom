@@ -36,7 +36,7 @@
 ```powershell
 cd "c:\Users\msi\Downloads\DIPLOM_24 04 — копия\DIPLOM_4\DIPLOM_22\backend"
 npm start
-```
+``
 
 Проверка:
 - открой `http://localhost:4000/health` (должен быть JSON с `ok: true`);

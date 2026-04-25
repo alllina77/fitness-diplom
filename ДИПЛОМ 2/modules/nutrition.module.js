@@ -321,6 +321,15 @@ window.AppModules.nutrition = {
         justify-content: center;
       }
       .nutrition-macro-chart-wrap canvas { display: block; max-width: 100%; height: auto !important; }
+      .nutrition-macro-fallback {
+        width: 100%;
+        max-width: 260px;
+        aspect-ratio: 1 / 1;
+        display: grid;
+        place-items: center;
+        margin: 0 auto;
+      }
+      .nutrition-macro-fallback svg { width: 100%; height: 100%; display: block; }
       .nutrition-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
       .nutrition-kpi {
         border-radius: 12px;
@@ -933,48 +942,116 @@ window.AppModules.nutrition = {
   },
 
   renderChart(root, totals) {
+    const wrap = root.querySelector(".nutrition-macro-chart-wrap");
     const canvas = root.querySelector("#nutritionMacroChart");
-    if (!canvas || !window.Chart) return;
+    if (!wrap || !canvas) return;
+    const oldFallback = wrap.querySelector(".nutrition-macro-fallback");
+    if (oldFallback) oldFallback.remove();
+
+    if (this.chart) {
+      this.chart.destroy();
+      this.chart = null;
+    }
+
+    const drawFallbackDonut = () => {
+      canvas.style.display = "none";
+      const p = Math.max(0, Number(totals.p) || 0);
+      const f = Math.max(0, Number(totals.f) || 0);
+      const c = Math.max(0, Number(totals.c) || 0);
+      const sum = Math.max(1, p + f + c);
+      const palette = ["#6ec8ff", "#f9a8c4", "#86efac"];
+      const textColor = document.body.classList.contains("light-theme")
+        ? "#334155"
+        : "#efe8ff";
+
+      const cx = 100;
+      const cy = 100;
+      const r = 78;
+      const stroke = 36;
+      let offset = 0;
+      const segments = [p, f, c]
+        .map((value, idx) => {
+          const len = (value / sum) * (Math.PI * 2 * r);
+          const dash = `${Math.max(2, len)} ${Math.max(1, Math.PI * 2 * r - len)}`;
+          const part = `
+            <circle cx="${cx}" cy="${cy}" r="${r}"
+              fill="none"
+              stroke="${palette[idx]}"
+              stroke-width="${stroke}"
+              stroke-linecap="butt"
+              transform="rotate(-90 ${cx} ${cy})"
+              stroke-dasharray="${dash}"
+              stroke-dashoffset="${-offset}" />
+          `;
+          offset += len;
+          return part;
+        })
+        .join("");
+
+      const fallback = document.createElement("div");
+      fallback.className = "nutrition-macro-fallback";
+      fallback.innerHTML = `
+        <svg viewBox="0 0 200 200" role="img" aria-label="Диаграмма БЖУ">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="${stroke}" />
+          ${segments}
+          <circle cx="${cx}" cy="${cy}" r="48" fill="${document.body.classList.contains("light-theme") ? "#f8fafc" : "#1b1433"}"></circle>
+          <text x="${cx}" y="96" text-anchor="middle" fill="${textColor}" font-size="14" font-weight="700">БЖУ</text>
+          <text x="${cx}" y="118" text-anchor="middle" fill="${textColor}" font-size="13">${Math.round(sum)} г</text>
+        </svg>
+      `;
+      wrap.appendChild(fallback);
+    };
+
+    if (!window.Chart) {
+      drawFallbackDonut();
+      return;
+    }
+
     const ctx = canvas.getContext("2d");
-    if (this.chart) this.chart.destroy();
     const textColor = document.body.classList.contains("light-theme")
       ? "#334155"
       : "#e9dcff";
-    this.chart = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: ["Белки", "Жиры", "Углеводы"],
-        datasets: [
-          {
-            data: [Math.max(0.1, totals.p), Math.max(0.1, totals.f), Math.max(0.1, totals.c)],
-            backgroundColor: ["#6ec8ff", "#f9a8c4", "#86efac"],
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 1.12,
-        cutout: "62%",
-        layout: { padding: { top: 6, bottom: 6, left: 4, right: 4 } },
-        plugins: {
-          legend: {
-            position: "bottom",
-            align: "center",
-            labels: {
-              color: textColor,
-              boxWidth: 14,
-              boxHeight: 14,
-              padding: 14,
-              font: { size: 13, weight: "500" },
-              usePointStyle: true,
-              pointStyle: "circle",
+    try {
+      canvas.style.display = "block";
+      this.chart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["Белки", "Жиры", "Углеводы"],
+          datasets: [
+            {
+              data: [Math.max(0.1, totals.p), Math.max(0.1, totals.f), Math.max(0.1, totals.c)],
+              backgroundColor: ["#6ec8ff", "#f9a8c4", "#86efac"],
+              borderWidth: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 1.12,
+          cutout: "62%",
+          layout: { padding: { top: 6, bottom: 6, left: 4, right: 4 } },
+          plugins: {
+            legend: {
+              position: "bottom",
+              align: "center",
+              labels: {
+                color: textColor,
+                boxWidth: 14,
+                boxHeight: 14,
+                padding: 14,
+                font: { size: 13, weight: "500" },
+                usePointStyle: true,
+                pointStyle: "circle",
+              },
             },
           },
         },
-      },
-    });
+      });
+    } catch (_e) {
+      this.chart = null;
+      drawFallbackDonut();
+    }
   },
 
   closeNutritionModals(root) {
