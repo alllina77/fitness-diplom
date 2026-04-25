@@ -1,0 +1,279 @@
+﻿<!doctype html>
+<html lang="ru">
+  <head>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Тренировочный план и прогресс</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <div id="authRoot" class="auth-root" style="display: none"></div>
+    <div id="appRoot" style="display: none">
+      <!-- Top Toolbar -->
+      <div class="top-toolbar">
+        <div class="toolbar-left">
+          <button
+            type="button"
+            class="toolbar-profile-btn"
+            id="toolbarProfileBtn"
+            title="Мой профиль"
+            aria-label="Открыть профиль"
+          >
+            <span
+              class="user-avatar"
+              id="virtualAvatarMount"
+              aria-hidden="true"
+            ></span>
+            <span id="authUserBadge" class="toolbar-username"></span>
+          </button>
+          <div class="toolbar-tabs">
+            <div class="toolbar-tab active" data-tab="training">
+              🏋️ Тренировки
+            </div>
+            <div class="toolbar-tab" data-tab="nutrition">🥗 Питание</div>
+            <div class="toolbar-tab" data-tab="social">👥 Социальные сети</div>
+            <div class="toolbar-tab" data-tab="psychology">🧠 Поддержка</div>
+            <div class="toolbar-tab" data-tab="avatar">🧑 Аватар</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="app-content">
+        <!-- Вкладка Тренировки -->
+        <div id="training-tab" class="tab-content active">
+          <div class="app">
+            <div class="panel left">
+              <!-- НОВЫЙ СВОРАЧИВАЕМЫЙ БЛОК "МОИ ПЛАНЫ" -->
+              <div class="plans-header" id="plansToggle">
+                <h1>Мои планы</h1>
+                <span id="plansToggleIcon">▼</span>
+              </div>
+              <div class="plans-content" id="plansContent">
+                <div class="form-row">
+                  <select id="planSelect" style="flex: 1"></select>
+                  <button id="newPlan" title="Создать новый план">➕</button>
+                  <button id="deletePlan" title="Удалить текущий план">
+                    🗑️
+                  </button>
+                </div>
+
+                <div class="form-row">
+                  <input
+                    id="planName"
+                    placeholder="Название плана"
+                    style="flex: 1"
+                  />
+                  <button id="savePlan">Сохранить</button>
+                </div>
+
+                <div class="form-row">
+                  <input
+                    id="daysCount"
+                    type="number"
+                    min="1"
+                    placeholder="Кол-во дней"
+                  />
+                  <button id="createDays">Создать дни</button>
+                </div>
+
+                <hr
+                  style="
+                    border: none;
+                    border-top: 1px solid rgba(255, 255, 255, 0.03);
+                    margin: 12px 0;
+                  "
+                />
+
+                <h3>Дни</h3>
+                <div id="dayList" class="day-list"></div>
+              </div>
+
+              <hr
+                style="
+                  border: none;
+                  border-top: 1px solid rgba(255, 255, 255, 0.03);
+                  margin: 12px 0;
+                "
+              />
+
+              <h3>Каталог упражнений</h3>
+              <div class="catalog-toggle" id="catalogToggle">
+                <span>📚 Открыть каталог</span>
+                <span id="catalogToggleIcon">▼</span>
+              </div>
+
+              <div class="muscle-groups" id="muscleGroups">
+                <!-- Группы мышц будут добавлены через JavaScript -->
+              </div>
+
+              <div class="exercises-list" id="exercisesList">
+                <!-- Упражнения будут добавлены через JavaScript -->
+              </div>
+
+              <hr
+                style="
+                  border: none;
+                  border-top: 1px solid rgba(255, 255, 255, 0.03);
+                  margin: 12px 0;
+                "
+              />
+
+              <!-- Новая секция: Шаблоны тренировочных программ -->
+              <div class="programs-section">
+                <h3>📋 Шаблоны программ</h3>
+                <button
+                  id="showPrograms"
+                  style="width: 100%; margin-bottom: 12px"
+                >
+                  Выбрать готовую программу
+                </button>
+              </div>
+
+              <h3>План</h3>
+              <div id="planSummary" class="muted small"></div>
+              <footer>
+                Серверное сохранение в БД · Тёмная тема · Графики прогресса
+              </footer>
+            </div>
+
+            <div class="panel center">
+              <div class="topbar">
+                <div>
+                  <h2 id="currentDayTitle">Выберите день</h2>
+                  <div class="muted small" id="dayInfo"></div>
+                </div>
+                <div class="row">
+                  <button id="addExercise">Добавить упражнение</button>
+                  <button id="startWorkout">Начать тренировку</button>
+                </div>
+              </div>
+
+              <input
+                id="searchEx"
+                class="search"
+                placeholder="Поиск упражнений в текущем дне..."
+                style="margin-bottom: 12px"
+              />
+
+              <div id="exList"></div>
+              <div id="emptyHint" class="empty">Нет упражнений</div>
+            </div>
+
+            <div class="panel right">
+              <div class="tabs">
+                <div class="tab active" data-tab="progress">📊 Прогресс</div>
+                <div class="tab" data-tab="calendar">📅 Календарь</div>
+              </div>
+
+              <!-- Вкладка прогресса -->
+              <div id="progressPanel" class="tab-content active">
+                <h3>Прогресс тренировок</h3>
+
+                <div
+                  id="chartsArea"
+                  style="margin-top: 12px; margin-bottom: 20px"
+                >
+                  <div class="empty">
+                    Выберите упражнение для просмотра графиков
+                  </div>
+                </div>
+
+                <div class="analytics-section">
+                  <h4>Нагрузка по группам мышц</h4>
+                  <div id="muscleStatsContainer">
+                    <!-- Диаграмма будет генерироваться JavaScript -->
+                  </div>
+                </div>
+
+                <div class="analytics-section">
+                  <h4>Рекомендации по прогрессии</h4>
+                  <div id="progressionRecommendations">
+                    <!-- Рекомендации будут генерироваться JavaScript -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Вкладка календаря с исправлениями -->
+              <div id="calendarPanel" class="tab-content">
+                <div class="topbar">
+                  <h3>Календарь тренировок</h3>
+                  <button id="clearAllHistory">🗑️ Очистить всю историю</button>
+                </div>
+                <div class="calendar" id="calendar">
+                  <!-- Календарь будет генерироваться JavaScript -->
+                </div>
+                <div id="calendarWorkouts" class="workout-history">
+                  <!-- Список тренировок выбранного дня -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Вкладка Питание -->
+        <div id="nutrition-tab" class="tab-content">
+          <div id="nutritionModuleMount" data-module="nutrition"></div>
+        </div>
+
+        <!-- Вкладка Social Media -->
+        <div id="social-tab" class="tab-content">
+          <div id="socialModuleMount" data-module="social"></div>
+        </div>
+
+        <!-- Вкладка Психологическая поддержка -->
+        <div id="psychology-tab" class="tab-content">
+          <div id="psychologyModuleMount" data-module="psychology"></div>
+        </div>
+
+        <!-- Вкладка Аватар -->
+        <div id="avatar-tab" class="tab-content">
+          <div id="avatarModuleMount" data-module="avatar-panel"></div>
+        </div>
+
+        <!-- Вкладка Профиль -->
+        <div id="profile-tab" class="tab-content">
+          <div id="profileModuleMount" data-module="profile"></div>
+        </div>
+      </div>
+
+      <!-- Модальные окна (остаются без изменений) -->
+      <div id="modal">
+        <div class="backdrop" onclick="closeModal()"></div>
+        <div class="window">
+          <div id="modalContent"></div>
+        </div>
+      </div>
+
+      <div id="confirmModal">
+        <div class="confirm-window">
+          <p id="confirmMessage">Вы уверены?</p>
+          <div class="confirm-actions">
+            <button id="confirmYes" class="btn btn-danger">Да</button>
+            <button id="confirmNo" class="btn btn-secondary">Отмена</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="alertModal">
+        <div class="alert-window">
+          <p id="alertMessage" class="alert-message"></p>
+          <button id="alertOk" class="alert-ok">OK</button>
+        </div>
+      </div>
+
+      <script src="./js/auth.js"></script>
+      <script src="./modules/avatar.module.js"></script>
+      <script src="./modules/nutrition.module.js"></script>
+      <script src="./modules/social.module.js"></script>
+      <script src="./modules/psychology.module.js"></script>
+      <script src="./modules/profile.module.js"></script>
+      <script src="./js/app.js"></script>
+    </div>
+  </body>
+</html>
