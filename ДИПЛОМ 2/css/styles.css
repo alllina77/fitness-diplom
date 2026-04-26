@@ -716,7 +716,6 @@ body.light-theme .mental-sub {
         margin-bottom: 14px;
         background: transparent;
         backdrop-filter: none;
-        gap: 12px;
       }
       #training-tab .right .topbar {
         position: static;
@@ -726,31 +725,6 @@ body.light-theme .mental-sub {
       }
       #training-tab .row {
         flex-wrap: wrap;
-      }
-
-      /* Фикс: кнопки в верхней панели "прыгают" из-за разной ширины текста */
-      #training-tab .center .topbar .row {
-        flex-wrap: nowrap;
-        align-items: stretch;
-        justify-content: flex-end;
-      }
-      #training-tab .center .topbar .row > button {
-        flex: 0 0 auto;
-        min-width: 190px;
-        text-align: center;
-        white-space: nowrap;
-      }
-      @media (max-width: 820px) {
-        #training-tab .center .topbar {
-          flex-wrap: wrap;
-        }
-        #training-tab .center .topbar .row {
-          flex-wrap: wrap;
-          width: 100%;
-        }
-        #training-tab .center .topbar .row > button {
-          flex: 1 1 190px;
-        }
       }
       #training-tab .form-row {
         align-items: center;
