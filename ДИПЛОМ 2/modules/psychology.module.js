@@ -113,6 +113,16 @@ window.AppModules.psychology = {
     localStorage.setItem(this.storageKeys.checkins, JSON.stringify(checkins));
   },
 
+  notify(message) {
+    const text = String(message || "").trim();
+    if (!text) return;
+    try {
+      window.AppModules?.avatar?.showXpToast?.(text, 0);
+    } catch (_e) {
+      // no-op
+    }
+  },
+
   getWeeklyStats() {
     const checkins = this.loadCheckins();
     const now = Date.now();
@@ -171,7 +181,7 @@ window.AppModules.psychology = {
       const last = localStorage.getItem(xpFlagKey);
       if (last !== today) {
         localStorage.setItem(xpFlagKey, today);
-        window.AppModules?.avatar?.grantXp?.("checkin", 10);
+        window.AppModules?.avatar?.grantXp?.("checkin", 10, { unitsAdded: 1 });
       }
     } catch (_e) { /* no-op */ }
   },
@@ -910,6 +920,7 @@ window.AppModules.psychology = {
       }
       done.textContent =
         "Чекин сохранен. Спасибо, что отметили состояние. Это поможет настроить нагрузку мягче.";
+      this.notify("Чекин и сон сохранены");
       this.renderActionCard(root);
       this.renderCheckinCalendar(root);
       this.renderWeeklyStats(root);

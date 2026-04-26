@@ -33,6 +33,7 @@ window.AppModules.avatar = {
 
   xpPerLevel: 100,
   xpRules: { set: 5, meal: 2, checkin: 10 },
+  xpDailyCaps: { workoutSets: 25, meals: 10, checkins: 1 },
 
   escapeHtml(value) {
     return String(value || "")
@@ -77,6 +78,64 @@ window.AppModules.avatar = {
     start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - (days - 1));
     return t >= start.getTime();
+  },
+
+  countTodayActivity(todayKey) {
+    const nutrition = this.readJson("nutritionEntries_v1", []);
+    const checkins = this.readJson("mentalAssistant_checkins_v1", []);
+    const workoutsByPlan = this.readJson("trainingWorkouts_v4", {});
+    const entries = Array.isArray(nutrition) ? nutrition : [];
+    const mental = Array.isArray(checkins) ? checkins : [];
+    const workouts = [];
+    Object.values(workoutsByPlan || {}).forEach((list) => {
+      if (Array.isArray(list)) workouts.push(...list);
+    });
+    const meals = entries.filter((e) => e.dateKey === todayKey).length;
+    const checkinsCount = mental.filter((c) => c.dateKey === todayKey).length;
+    const sets = workouts
+      .filter((w) => w.date === todayKey)
+      .reduce((sum, w) => sum + (Array.isArray(w.sets) ? w.sets.length : 0), 0);
+    return { meals, checkins: checkinsCount, workoutSets: sets };
+  },
+
+  computeXpFromActivity(entries, mental, workouts) {
+    const byDay = {};
+    const ensureDay = (day) => {
+      if (!day) return null;
+      if (!byDay[day]) {
+        byDay[day] = { meals: 0, checkins: 0, workoutSets: 0 };
+      }
+      return byDay[day];
+    };
+
+    entries.forEach((item) => {
+      const day = ensureDay(item?.dateKey);
+      if (day) day.meals += 1;
+    });
+    mental.forEach((item) => {
+      const day = ensureDay(item?.dateKey);
+      if (day) day.checkins += 1;
+    });
+    workouts.forEach((item) => {
+      const day = ensureDay(item?.date);
+      if (day) {
+        day.workoutSets += Array.isArray(item?.sets) ? item.sets.length : 0;
+      }
+    });
+
+    const caps = this.xpDailyCaps || {};
+    const rules = this.xpRules || {};
+    return Object.values(byDay).reduce((sum, day) => {
+      const setsUnits = Math.min(day.workoutSets, caps.workoutSets || 25);
+      const mealUnits = Math.min(day.meals, caps.meals || 10);
+      const checkinUnits = Math.min(day.checkins, caps.checkins || 1);
+      return (
+        sum +
+        setsUnits * (rules.set || 0) +
+        mealUnits * (rules.meal || 0) +
+        checkinUnits * (rules.checkin || 0)
+      );
+    }, 0);
   },
 
   getProfilePhotoDataUrl() {
@@ -138,9 +197,7 @@ window.AppModules.avatar = {
       [...mental].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] ||
       null;
 
-    const r = this.xpRules;
-    const xp =
-      totalSets * r.set + entries.length * r.meal + mental.length * r.checkin;
+    const xp = this.computeXpFromActivity(entries, mental, workouts);
     const perLevel = this.xpPerLevel;
     const level = Math.max(1, Math.min(99, 1 + Math.floor(xp / perLevel)));
     const levelProgress = (xp % perLevel) / perLevel;
@@ -659,15 +716,54 @@ window.AppModules.avatar = {
     }, 2600);
   },
 
-  grantXp(kind, amount) {
-    const xp = Number(amount) > 0 ? Number(amount) : this.xpRules?.[kind] || 0;
-    if (!xp) return;
-    const messages = {
-      workout: `Вы записали тренировку, начислено ${xp} опыта!`,
-      meal: `Вы добавили приём пищи, начислено ${xp} опыта!`,
-      checkin: `Вы заполнили чекин, начислено ${xp} опыта!`,
+  grantXp(kind, amount, meta = {}) {
+    const kindConfig = {
+      workout: { counter: "workoutSets", cap: this.xpDailyCaps?.workoutSets || 25, perUnit: this.xpRules?.set || 0 },
+      meal: { counter: "meals", cap: this.xpDailyCaps?.meals || 10, perUnit: this.xpRules?.meal || 0 },
+      checkin: { counter: "checkins", cap: this.xpDailyCaps?.checkins || 1, perUnit: this.xpRules?.checkin || 0 },
     };
-    this.showXpToast(messages[kind] || `Начислено ${xp} опыта!`, xp);
+    const cfg = kindConfig[kind];
+    if (!cfg || !cfg.perUnit) return;
+
+    const today = this.todayKey();
+    const counters = this.countTodayActivity(today);
+    const unitsNow = Number(counters[cfg.counter] || 0);
+
+    const amountUnits = Number(amount) > 0 ? Math.round(Number(amount) / cfg.perUnit) : 0;
+    const fallbackUnits =
+      kind === "workout" ? Math.max(1, amountUnits || 1) : 1;
+    const unitsAdded = Math.max(
+      1,
+      Number.isFinite(Number(meta?.unitsAdded))
+        ? Number(meta.unitsAdded)
+        : fallbackUnits,
+    );
+
+    const unitsBefore = Math.max(0, unitsNow - unitsAdded);
+    const grantedUnits =
+      Math.min(cfg.cap, unitsNow) - Math.min(cfg.cap, unitsBefore);
+    const grantedXp = Math.max(0, grantedUnits) * cfg.perUnit;
+
+    if (grantedXp > 0) {
+      const limitReachedNow = unitsNow > cfg.cap;
+      const messages = {
+        workout: `Вы записали тренировку, начислено ${grantedXp} опыта${limitReachedNow ? " (с учётом дневного лимита)" : ""}!`,
+        meal: `Вы добавили приём пищи, начислено ${grantedXp} опыта${limitReachedNow ? " (с учётом дневного лимита)" : ""}!`,
+        checkin: `Вы заполнили чекин, начислено ${grantedXp} опыта${limitReachedNow ? " (с учётом дневного лимита)" : ""}!`,
+      };
+      this.showXpToast(messages[kind] || `Начислено ${grantedXp} опыта!`, grantedXp);
+    } else {
+      const capLabel = {
+        workout: `${cfg.cap} подходов`,
+        meal: `${cfg.cap} блюд`,
+        checkin: `${cfg.cap} запись сна/чекина`,
+      };
+      this.showXpToast(
+        `Лимит опыта на сегодня достигнут: ${capLabel[kind] || cfg.cap}. Данные сохранены.`,
+        0,
+      );
+    }
+
     try {
       if (document.getElementById("avatarModuleMount")) {
         this.renderPanel("avatarModuleMount");

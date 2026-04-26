@@ -8,7 +8,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Тренировочный план и прогресс</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="./js/vendor/chart.umd.min.js"></script>
+    <script>
+      if (typeof window.Chart !== "function") {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+        document.head.appendChild(script);
+      }
+    </script>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>

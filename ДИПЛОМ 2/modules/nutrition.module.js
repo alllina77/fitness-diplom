@@ -591,6 +591,16 @@ window.AppModules.nutrition = {
     localStorage.setItem(key, JSON.stringify(value));
   },
 
+  notify(message) {
+    const text = String(message || "").trim();
+    if (!text) return;
+    try {
+      window.AppModules?.avatar?.showXpToast?.(text, 0);
+    } catch (_e) {
+      /* no-op */
+    }
+  },
+
   getCustomMeals() {
     const list = this.readJson(this.storage.customMeals, []);
     return Array.isArray(list) ? list : [];
@@ -636,6 +646,7 @@ window.AppModules.nutrition = {
     fold[id] = false;
     this.saveJson(this.storage.mealFold, fold);
     this.ui.openMeal = id;
+    this.notify(`Приём "${String(label || "Приём пищи").trim() || "Приём пищи"}" добавлен`);
   },
 
   removeCustomMealSlot(mealId, dateKey) {
@@ -645,6 +656,7 @@ window.AppModules.nutrition = {
     this.saveJson(this.storage.entries, entries);
     this.setCustomMeals(this.getCustomMeals().filter((m) => m.id !== mealId));
     if (this.ui.openMeal === mealId) this.ui.openMeal = null;
+    this.notify("Приём пищи удалён");
   },
 
   todayKey() {
@@ -812,12 +824,16 @@ window.AppModules.nutrition = {
     const entries = this.getEntries();
     entries.push(entry);
     this.saveJson(this.storage.entries, entries);
-    try { window.AppModules?.avatar?.grantXp?.("meal", 2); } catch (_e) { /* no-op */ }
+    try {
+      window.AppModules?.avatar?.grantXp?.("meal", 2, { unitsAdded: 1 });
+    } catch (_e) { /* no-op */ }
+    this.notify("Блюдо сохранено");
   },
 
   removeEntry(id) {
     const entries = this.getEntries().filter((item) => item.id !== id);
     this.saveJson(this.storage.entries, entries);
+    this.notify("Запись удалена");
   },
 
   removeMealEntries(dateKey, meal) {
@@ -825,6 +841,7 @@ window.AppModules.nutrition = {
       (item) => !(item.dateKey === dateKey && item.meal === meal)
     );
     this.saveJson(this.storage.entries, entries);
+    this.notify("Приём очищен");
   },
 
   getDayEntries(dateKey) {
@@ -1169,6 +1186,7 @@ window.AppModules.nutrition = {
         const custom = this.readJson(this.storage.products, []);
         custom.push({ name, p, f, c, kcal });
         this.saveJson(this.storage.products, custom);
+        this.notify(`Продукт "${name}" добавлен`);
         this.closeNutritionModals(root);
         this.render(root.id);
         return;

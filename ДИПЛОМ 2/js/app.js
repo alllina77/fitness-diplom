@@ -96,9 +96,52 @@
         let currentCalendarDate = new Date();
         let plansCollapsed = localStorage.getItem("plansCollapsed") === "true";
         let currentRightPanelTab = "progress"; // Сохраняем активную вкладку правой панели
+        let chartJsLoaderPromise = null;
 
         function uid() {
           return "id_" + Math.random().toString(36).slice(2, 10);
+        }
+
+        function ensureChartJsLoaded() {
+          if (typeof window.Chart === "function") {
+            return Promise.resolve(true);
+          }
+
+          if (chartJsLoaderPromise) return chartJsLoaderPromise;
+
+          chartJsLoaderPromise = new Promise((resolve) => {
+            const onLoaded = () => {
+              resolve(typeof window.Chart === "function");
+            };
+            const onFailed = () => {
+              chartJsLoaderPromise = null;
+              resolve(false);
+            };
+
+            let script = document.getElementById("chartjs-fallback-loader");
+            if (script) {
+              script.addEventListener("load", onLoaded, { once: true });
+              script.addEventListener("error", onFailed, { once: true });
+              if (typeof window.Chart === "function") onLoaded();
+              return;
+            }
+
+            script = document.createElement("script");
+            script.id = "chartjs-fallback-loader";
+            script.src = "./js/vendor/chart.umd.min.js";
+            script.onload = onLoaded;
+            script.onerror = () => {
+              const cdnScript = document.createElement("script");
+              cdnScript.src =
+                "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+              cdnScript.onload = onLoaded;
+              cdnScript.onerror = onFailed;
+              document.head.appendChild(cdnScript);
+            };
+            document.head.appendChild(script);
+          });
+
+          return chartJsLoaderPromise;
         }
 
         function loadPlans() {
@@ -1466,7 +1509,11 @@
                 let gained = 0;
                 try {
                   gained = sets.length * 5;
-                  if (gained > 0) window.AppModules?.avatar?.grantXp?.("workout", gained);
+                  if (gained > 0) {
+                    window.AppModules?.avatar?.grantXp?.("workout", gained, {
+                      unitsAdded: sets.length,
+                    });
+                  }
                 } catch (_e) { /* no-op */ }
 
                 closeModal();
@@ -1776,13 +1823,18 @@
 
                 let gained = 0;
                 try {
-                  gained = exercisesWithSets.reduce((sum, ex) => {
+                  const workoutSetsCount = exercisesWithSets.reduce((sum, ex) => {
                     const valid = (ex.sets || [])
                       .map((set) => sanitizeSet(set))
                       .filter((set) => set.r > 0 || set.w > 0);
                     return sum + valid.length;
-                  }, 0) * 5;
-                  if (gained > 0) window.AppModules?.avatar?.grantXp?.("workout", gained);
+                  }, 0);
+                  gained = workoutSetsCount * 5;
+                  if (gained > 0) {
+                    window.AppModules?.avatar?.grantXp?.("workout", gained, {
+                      unitsAdded: workoutSetsCount,
+                    });
+                  }
                 } catch (_e) { /* no-op */ }
 
                 closeModal();
@@ -1804,6 +1856,19 @@
         /* ===== charts for exercise ===== */
         function showChartsForExercise(ex) {
           if (!chartsArea) return;
+
+          if (typeof window.Chart !== "function") {
+            chartsArea.innerHTML = `
+              <div class="empty">
+                Библиотека графиков загружается. Попробуйте открыть упражнение снова через пару секунд.
+              </div>
+            `;
+            ensureChartJsLoaded().then((ok) => {
+              if (ok) showChartsForExercise(ex);
+            });
+            return;
+          }
+
           chartsArea.innerHTML = "";
           const wrapper = document.createElement("div");
           wrapper.innerHTML = `
@@ -1894,6 +1959,20 @@
         function renderMuscleStats() {
           const container = document.getElementById("muscleStatsContainer");
           if (!container) return;
+
+          if (typeof window.Chart !== "function") {
+            container.innerHTML = `
+              <div class="empty">
+                Диаграмма пока недоступна: загружаем библиотеку графиков.
+              </div>
+            `;
+            ensureChartJsLoaded().then((ok) => {
+              if (ok && currentRightPanelTab === "progress") {
+                renderMuscleStats();
+              }
+            });
+            return;
+          }
 
           const stats = {};
           MUSCLE_GROUPS.forEach((m) => (stats[m] = 0));
@@ -2754,19 +2833,9 @@
                 requestAnimationFrame(rerenderNutrition);
               });
               setTimeout(rerenderNutrition, 180);
-              if (!window.Chart) {
-                const existing = document.getElementById("chartjs-fallback-loader");
-                if (!existing) {
-                  const script = document.createElement("script");
-                  script.id = "chartjs-fallback-loader";
-                  script.src =
-                    "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
-                  script.onload = () => {
-                    rerenderNutrition();
-                  };
-                  document.head.appendChild(script);
-                }
-              }
+              ensureChartJsLoaded().then((ok) => {
+                if (ok) rerenderNutrition();
+              });
             }
           };
 
