@@ -2969,7 +2969,10 @@
           ).join("");
 
           openModal(`
-            <h3>Готовые программы тренировок</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;">
+              <h3 style="margin:0;">Готовые программы тренировок</h3>
+              <button id="closeProgramsModal" type="button" title="Закрыть" style="padding:6px 10px;line-height:1;">✕</button>
+            </div>
             <div class="muted small" style="margin-bottom:12px;">
               Программа заменит дни в текущем плане и создаст структуру автоматически.
             </div>
@@ -2977,6 +2980,10 @@
           `);
 
           setTimeout(() => {
+            const closeBtn = document.getElementById("closeProgramsModal");
+            if (closeBtn) {
+              closeBtn.addEventListener("click", closeModal);
+            }
             document.querySelectorAll(".apply-program-btn").forEach((btn) => {
               btn.addEventListener("click", () => {
                 const programId = btn.getAttribute("data-program-id");

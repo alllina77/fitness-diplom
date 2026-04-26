@@ -1014,7 +1014,7 @@ body.light-theme .mental-sub {
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 60;
+        z-index: 1300;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s ease;
@@ -1036,7 +1036,7 @@ body.light-theme .mental-sub {
       }
       #modal .window {
         position: relative;
-        z-index: 61;
+        z-index: 1301;
         max-width: 820px;
         width: 94%;
         max-height: 90vh;
