@@ -1,0 +1,25 @@
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE user_profiles DROP COLUMN IF EXISTS avatar_photo;
+
+ALTER TABLE user_storage ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
+
+CREATE TABLE IF NOT EXISTS training_plans (
+  id TEXT PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  days JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS training_workouts (
+  id TEXT PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT,
+  workout_date DATE NOT NULL,
+  ex_id TEXT NOT NULL,
+  ex_name TEXT NOT NULL,
+  muscle TEXT NOT NULL DEFAULT 'другое',
+  sets JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
