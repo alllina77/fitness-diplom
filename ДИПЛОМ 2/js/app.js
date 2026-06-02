@@ -146,7 +146,21 @@
 
         function loadPlans() {
           try {
-            return JSON.parse(localStorage.getItem(STORAGE_PLANS)) || [];
+            const raw = localStorage.getItem(STORAGE_PLANS);
+            if (!raw) return [];
+
+            let parsed = JSON.parse(raw);
+
+            // Старые/ошибочные форматы после синка с сервером:
+            // - строка, внутри которой лежит JSON
+            // - объект вида { value: "..." }
+            if (typeof parsed === "string") {
+              parsed = JSON.parse(parsed);
+            } else if (parsed && typeof parsed === "object" && typeof parsed.value === "string") {
+              parsed = JSON.parse(parsed.value);
+            }
+
+            return Array.isArray(parsed) ? parsed : [];
           } catch (e) {
             return [];
           }

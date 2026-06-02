@@ -7,6 +7,11 @@ test("storage key whitelist accepts allowed keys", () => {
   assert.equal(ok.ok, true);
 });
 
+test("storage key whitelist accepts avatarProgress_v1", () => {
+  const ok = validateStorageKey("avatarProgress_v1");
+  assert.equal(ok.ok, true);
+});
+
 test("storage key whitelist rejects unknown keys", () => {
   const bad = validateStorageKey("someRandomKey");
   assert.equal(bad.ok, false);

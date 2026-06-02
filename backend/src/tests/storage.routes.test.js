@@ -7,6 +7,7 @@ const allowedKeys = [
   "trainingWorkouts_v4",
   "nutritionEntries_v1",
   "mentalAssistant_checkins_v1",
+  "avatarProgress_v1",
 ];
 
 test("each allowed storage key is accepted", () => {

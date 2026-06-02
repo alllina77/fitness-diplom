@@ -33,7 +33,9 @@ function createApp() {
   const frontendDir = path.join(__dirname, "..", "..", "ДИПЛОМ 2");
 
   app.set("trust proxy", 1);
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  // Render/Helmet CSP can block inline scripts in static HTML. We avoid inline scripts,
+  // but also disable CSP here to prevent breakage when deploying static front.
+  app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false }));
   app.use(cors(buildCorsConfig()));
   app.use(express.json({ limit: "1mb" }));
 

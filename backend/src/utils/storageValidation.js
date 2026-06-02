@@ -2,6 +2,7 @@ const ALLOWED_STORAGE_KEYS = new Set([
   "trainingPlans_v3",
   "trainingWorkouts_v4",
   "trainingLastSetByExercise_v1",
+  "avatarProgress_v1",
   "plansCollapsed",
   "uiTheme_v1",
   "nutritionEntries_v1",
