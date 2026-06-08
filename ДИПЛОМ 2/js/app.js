@@ -3007,7 +3007,10 @@
                 if (!selectedProgram) return;
                 showConfirm(
                   "Применить выбранную программу к текущему плану? Текущие дни будут заменены.",
-                  () => applyTrainingProgram(selectedProgram)
+                  () => {
+                    applyTrainingProgram(selectedProgram);
+                    closeModal(); // закрываем форму с готовыми программами
+                  }
                 );
               });
             });

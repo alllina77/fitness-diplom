@@ -103,8 +103,13 @@
     async hydrateStorageFromServer() {
       this.storageHydrationInProgress = true;
       try {
-        // Важно: сначала очищаем локальные данные прошлого пользователя,
-        // чтобы не было "перетекания" тренировок/питания между аккаунтами.
+        // Сначала получаем данные с сервера и только при успехе очищаем локальные.
+        // Если сервер недоступен — НЕ стираем локальные данные, чтобы их не потерять.
+        const data = await this.request("/api/storage");
+        const items = data.items || {};
+
+        // Очищаем локальные данные прошлого пользователя, чтобы не было
+        // "перетекания" тренировок/питания между аккаунтами.
         const keysToClear = [];
         for (let i = 0; i < localStorage.length; i += 1) {
           const key = localStorage.key(i);
@@ -112,17 +117,17 @@
         }
         keysToClear.forEach((key) => this.originalStorage.removeItem(key));
 
-        const data = await this.request("/api/storage");
-        const items = data.items || {};
         Object.keys(items).forEach((key) => {
           // Не затираем "зарезервированные" ключи данными из пользовательского стораджа.
-          // Это нужно для глобальных данных на устройстве (например, лента соцсети).
           if (RESERVED_KEYS.has(key)) return;
           const raw = items[key]?.value;
-          if (typeof raw === "string") {
-            this.originalStorage.setItem(key, raw);
-          }
+          if (raw === undefined || raw === null) return;
+          // Поддерживаем оба формата: строка (текущий) и объект/массив (старые данные).
+          const toStore = typeof raw === "string" ? raw : JSON.stringify(raw);
+          this.originalStorage.setItem(key, toStore);
         });
+      } catch (_err) {
+        // Сервер недоступен — оставляем локальные данные как есть.
       } finally {
         this.storageHydrationInProgress = false;
       }
