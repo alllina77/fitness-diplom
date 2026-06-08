@@ -128,6 +128,36 @@
       }
     },
 
+    async persistKeyToServer(key, value, attempt = 1) {
+      // Повтор при сетевых/временных сбоях, чтобы данные не терялись,
+      // когда соединение с БД (Supabase pooler) обрывается на мгновение.
+      const MAX_ATTEMPTS = 4;
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/storage/${encodeURIComponent(key)}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${this.token}`,
+            },
+            body: JSON.stringify({ value: String(value) }),
+          }
+        );
+        // 4xx (кроме 429) повторять бессмысленно — это ошибка запроса.
+        if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
+          return;
+        }
+        throw new Error(`status ${response.status}`);
+      } catch (_e) {
+        if (attempt >= MAX_ATTEMPTS) return;
+        const delay = 500 * attempt;
+        setTimeout(() => {
+          this.persistKeyToServer(key, value, attempt + 1);
+        }, delay);
+      }
+    },
+
     enableStorageSync() {
       if (this.storageSyncEnabled) return;
       this.storageSyncEnabled = true;
@@ -137,14 +167,7 @@
         if (!this.token || this.storageHydrationInProgress || RESERVED_KEYS.has(key)) {
           return;
         }
-        fetch(`${API_BASE}/api/storage/${encodeURIComponent(key)}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.token}`,
-          },
-          body: JSON.stringify({ value: String(value) }),
-        }).catch(() => {});
+        this.persistKeyToServer(key, value);
       };
 
       localStorage.removeItem = (key) => {

@@ -667,16 +667,35 @@ window.AppModules.nutrition = {
     return `${y}-${m}-${day}`;
   },
 
+  isValidDateKey(value) {
+    const s = String(value || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const [y, m, d] = s.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    return (
+      dt.getFullYear() === y &&
+      dt.getMonth() === m - 1 &&
+      dt.getDate() === d
+    );
+  },
+
   formatMonthTitleRu(year, monthIndex) {
     const months = [
       "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
       "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
     ];
-    return `${months[monthIndex]} ${year} г.`;
+    const mi = Number(monthIndex);
+    const yr = Number(year);
+    if (!Number.isInteger(mi) || mi < 0 || mi > 11 || !Number.isFinite(yr)) {
+      const now = new Date();
+      return `${months[now.getMonth()]} ${now.getFullYear()} г.`;
+    }
+    return `${months[mi]} ${yr} г.`;
   },
 
   getSelectedDate() {
-    return localStorage.getItem(this.storage.day) || this.todayKey();
+    const raw = localStorage.getItem(this.storage.day);
+    return this.isValidDateKey(raw) ? raw : this.todayKey();
   },
 
   setSelectedDate(dateKey) {
@@ -691,8 +710,8 @@ window.AppModules.nutrition = {
   getMonthCursor() {
     const raw = localStorage.getItem(this.storage.monthCursor);
     if (raw && /^\d{4}-\d{2}$/.test(raw)) return raw;
-    const d = new Date(this.getSelectedDate() + "T12:00:00");
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    // getSelectedDate всегда возвращает корректный ключ YYYY-MM-DD
+    return this.getSelectedDate().slice(0, 7);
   },
 
   setMonthCursor(ym) {
@@ -700,16 +719,19 @@ window.AppModules.nutrition = {
   },
 
   formatDateRu(dateKey) {
+    const key = this.isValidDateKey(dateKey) ? dateKey : this.todayKey();
     try {
-      const [y, m, d] = dateKey.split("-").map(Number);
-      return new Date(y, m - 1, d).toLocaleDateString("ru-RU", {
+      const [y, m, d] = key.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      if (Number.isNaN(dt.getTime())) return key;
+      return dt.toLocaleDateString("ru-RU", {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       });
     } catch (_e) {
-      return dateKey;
+      return key;
     }
   },
 
