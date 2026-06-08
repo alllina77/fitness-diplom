@@ -4,6 +4,29 @@ const { authMiddleware } = require("../middleware/auth");
 const { all, get, run } = require("../db");
 const { validateStorageKey } = require("../utils/storageValidation");
 
+// Колонка value_json имеет тип TEXT и хранит строку из localStorage как есть.
+// Старые записи были закодированы по нескольку раз подряд (каждое сохранение
+// добавляло новый слой JSON-строки). Разворачиваем слои, пока значение
+// остаётся "строкой внутри строки", и возвращаем исходную строку.
+function healStoredValue(raw) {
+  if (typeof raw !== "string") return raw;
+  let current = raw;
+  for (let i = 0; i < 40; i += 1) {
+    let parsed;
+    try {
+      parsed = JSON.parse(current);
+    } catch (_e) {
+      break; // не JSON — это финальная строка (например "dark")
+    }
+    if (typeof parsed === "string") {
+      current = parsed; // ещё один лишний слой кодирования — продолжаем
+      continue;
+    }
+    break; // дошли до настоящей структуры (массив/объект/число) — current валиден
+  }
+  return current;
+}
+
 function createStorageRouter() {
   const router = express.Router();
 
@@ -18,7 +41,7 @@ function createStorageRouter() {
       const items = {};
       rows.forEach((row) => {
         items[row.key] = {
-          value: row.value_json,
+          value: healStoredValue(row.value_json),
           updatedAt: row.updated_at,
           version: row.version,
         };
@@ -58,17 +81,19 @@ function createStorageRouter() {
       }
 
       const nextVersion = existing ? Number(existing.version) + 1 : 1;
+      // value_json — TEXT. Храним строку из localStorage как есть, без ::jsonb,
+      // чтобы при чтении получить ровно то же значение (без двойного кодирования).
       await run(
         `
         INSERT INTO user_storage (user_id, key, value_json, version, updated_at)
-        VALUES ($1, $2, $3::jsonb, $4, NOW())
+        VALUES ($1, $2, $3, $4, NOW())
         ON CONFLICT(user_id, key)
         DO UPDATE SET
           value_json = EXCLUDED.value_json,
           version = EXCLUDED.version,
           updated_at = EXCLUDED.updated_at
         `,
-        [req.user.userId, key, JSON.stringify(value), nextVersion]
+        [req.user.userId, key, String(value), nextVersion]
       );
 
       return res.json({ ok: true, version: nextVersion });
@@ -94,4 +119,4 @@ function createStorageRouter() {
   return router;
 }
 
-module.exports = { createStorageRouter };
+module.exports = { createStorageRouter, healStoredValue };
